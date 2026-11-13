@@ -1,5 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type Ref,
+} from "react";
 import { api } from "./api";
+import { CloseIcon, ImageIcon } from "./icons";
+import { Kbd, MOD } from "./keys";
 import { MAX_BLURB_LENGTH, MAX_IMAGES_PER_SPARK, thumbUrl, type SparkInput } from "../shared/types";
 
 interface DraftImage {
@@ -25,12 +37,29 @@ interface Props {
   /** Also accept image pastes made while nothing else is focused (main composer only). */
   capturePagePaste?: boolean;
   placeholder?: string;
+  /** Collapse to a single line while unfocused and empty (main composer only). */
+  compact?: boolean;
+  ref?: Ref<ComposerHandle>;
+}
+
+export interface ComposerHandle {
+  focus(): void;
 }
 
 let keySeq = 0;
 const nextKey = () => `img-${++keySeq}`;
 
-export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, capturePagePaste, placeholder }: Props) {
+export function Composer({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  autoFocus,
+  capturePagePaste,
+  placeholder,
+  compact,
+  ref,
+}: Props) {
   const [blurb, setBlurb] = useState(initial?.blurb ?? "");
   const [images, setImages] = useState<DraftImage[]>(
     () => initial?.imageIds?.map((id) => ({ key: nextKey(), id })) ?? [],
@@ -51,13 +80,17 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
     ta.style.height = `${ta.scrollHeight}px`;
   }, [blurb]);
 
+  const focusEnd = useCallback(() => {
+    const ta = textareaRef.current;
+    ta?.focus();
+    ta?.setSelectionRange(ta.value.length, ta.value.length);
+  }, []);
+
+  useImperativeHandle(ref, () => ({ focus: focusEnd }), [focusEnd]);
+
   useEffect(() => {
-    if (autoFocus) {
-      const ta = textareaRef.current;
-      ta?.focus();
-      ta?.setSelectionRange(ta.value.length, ta.value.length);
-    }
-  }, [autoFocus]);
+    if (autoFocus) focusEnd();
+  }, [autoFocus, focusEnd]);
 
   // Revoke object URLs on unmount.
   useEffect(() => () => imagesRef.current.forEach((i) => i.preview && URL.revokeObjectURL(i.preview)), []);
@@ -130,9 +163,11 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       void submit();
-    } else if (e.key === "Escape" && onCancel) {
+    } else if (e.key === "Escape") {
       e.preventDefault();
-      onCancel();
+      e.stopPropagation();
+      if (onCancel) onCancel();
+      else (document.activeElement as HTMLElement | null)?.blur();
     }
   };
 
@@ -143,10 +178,11 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
   };
 
   const charsLeft = MAX_BLURB_LENGTH - blurb.length;
+  const classes = ["composer", compact && "compact", !empty && "has-content", dragging && "dragging"];
 
   return (
     <div
-      className={`composer${dragging ? " dragging" : ""}`}
+      className={classes.filter(Boolean).join(" ")}
       onKeyDown={onKeyDown}
       onDragOver={(e) => onDrag(e, true)}
       onDragEnter={(e) => onDrag(e, true)}
@@ -160,11 +196,17 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
         addFiles(e.dataTransfer.files);
       }}
     >
+      {compact && (
+        <span className="composer-idle-hint" aria-hidden="true">
+          <Kbd>n</Kbd>
+        </span>
+      )}
       <textarea
         ref={textareaRef}
         value={blurb}
-        rows={2}
-        placeholder={placeholder ?? "What sparked your interest? Paste a link, a thought, or a screenshot…"}
+        rows={1}
+        aria-label="Spark text"
+        placeholder={placeholder ?? "Capture a thought, link, or screenshot…"}
         onChange={(e) => setBlurb(e.target.value)}
         onPaste={(e) => {
           const files = [...e.clipboardData.files].filter((f) => f.type.startsWith("image/"));
@@ -181,9 +223,13 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
             <li key={img.key} className={img.error ? "error" : !img.id ? "uploading" : ""}>
               <img src={img.preview ?? thumbUrl(img.id!)} alt="" />
               {!img.id && !img.error && <span className="spinner" aria-label="Uploading" />}
-              {img.error && <span className="img-error" title={img.error}>!</span>}
+              {img.error && (
+                <span className="img-error" title={img.error}>
+                  !
+                </span>
+              )}
               <button type="button" className="remove" aria-label="Remove image" onClick={() => removeImage(img.key)}>
-                ×
+                <CloseIcon size={12} />
               </button>
             </li>
           ))}
@@ -201,12 +247,7 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
           aria-label="Add images"
           onClick={() => fileInputRef.current?.click()}
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M19 5v14H5V5h14m0-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-4.86 8.86-3 3.87L9 13.14 6 17h12l-3.86-5.14z"
-            />
-          </svg>
+          <ImageIcon size={17} />
         </button>
         <input
           ref={fileInputRef}
@@ -221,14 +262,17 @@ export function Composer({ initial, submitLabel, onSubmit, onCancel, autoFocus, 
         />
         {charsLeft < 500 && <span className={`char-count${tooLong ? " over" : ""}`}>{charsLeft}</span>}
         <span className="spacer" />
-        <span className="hint">Ctrl+Enter</span>
         {onCancel && (
-          <button type="button" className="button secondary" onClick={onCancel} disabled={saving}>
-            Cancel
+          <button type="button" className="button ghost" onClick={onCancel} disabled={saving}>
+            Cancel <Kbd>Esc</Kbd>
           </button>
         )}
         <button type="button" className="button primary" onClick={submit} disabled={!canSubmit}>
           {saving ? "Saving…" : uploading ? "Uploading…" : submitLabel}
+          <span className="button-keys">
+            <Kbd>{MOD}</Kbd>
+            <Kbd>↵</Kbd>
+          </span>
         </button>
       </div>
     </div>

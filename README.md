@@ -6,6 +6,9 @@ A single-user, chronological journal of interesting things: links, ideas, screen
 - Free-text search (SQLite FTS5, trigram tokenizer: substring and case-insensitive matching;
   `"quoted phrases"`; all terms must match).
 - Paste images into the composer, or press Ctrl+V anywhere on the page. You can also drag-and-drop or pick files.
+- Keyboard-driven: `j`/`k` to move, `/` to search, `n` to write, `e`/`d`/`y`/`o` to edit, delete, copy, or open
+  the selected spark. Press `?` for the full list.
+- Follows the system light/dark preference.
 - Installable PWA with an Android share target: share a link or image from any app into Sparks.
 - No auth. It is meant to sit behind a reverse proxy that handles mTLS.
 

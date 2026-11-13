@@ -12,7 +12,7 @@ self.addEventListener("fetch", (event) => {
         new Response(
           `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
            <title>Sparks — offline</title>
-           <body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0">
+           <body style="font-family:system-ui;background:#0f1012;color:#d8dade;display:grid;place-items:center;height:100vh;margin:0">
            <p>You're offline. Sparks will be here when you reconnect.</p>`,
           { headers: { "content-type": "text/html; charset=utf-8" } },
         ),

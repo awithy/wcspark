@@ -1,23 +1,50 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { api } from "./api";
 import { Composer } from "./Composer";
 import { fullTimestamp, timeLabel } from "./format";
+import { CopyIcon, EditIcon, TrashIcon } from "./icons";
+import { Kbd } from "./keys";
 import { RichText } from "./RichText";
 import { thumbUrl, type Spark } from "../shared/types";
+
+/** Actions the feed's keyboard handler can trigger on a spark. */
+export interface SparkHandle {
+  edit(): void;
+  confirmDelete(): void;
+  toggleMore(): void;
+}
 
 interface Props {
   spark: Spark;
   terms: string[];
+  selected: boolean;
+  fresh: boolean;
+  ref?: Ref<SparkHandle>;
+  onSelect(): void;
   onChanged(spark: Spark): void;
   onDeleted(id: number): void;
+  onCopy(spark: Spark): void;
   onOpenImage(spark: Spark, index: number): void;
 }
 
-export function SparkCard({ spark, terms, onChanged, onDeleted, onOpenImage }: Props) {
+export function SparkCard({ spark, terms, selected, fresh, ref, onSelect, onChanged, onDeleted, onCopy, onOpenImage }: Props) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
+  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const articleRef = useRef<HTMLElement>(null);
   const edited = spark.updatedAt - spark.createdAt > 60_000;
+
+  // The editor and delete prompt make the row taller; keep all of it in view.
+  useEffect(() => {
+    if (mode !== "view") articleRef.current?.scrollIntoView({ block: "nearest" });
+  }, [mode]);
+
+  useImperativeHandle(ref, () => ({
+    edit: () => setMode("edit"),
+    confirmDelete: () => setMode("confirm-delete"),
+    toggleMore: () => setExpanded((x) => !x),
+  }));
 
   const doDelete = async () => {
     setBusy(true);
@@ -31,76 +58,104 @@ export function SparkCard({ spark, terms, onChanged, onDeleted, onOpenImage }: P
     }
   };
 
+  const onConfirmKey = (e: KeyboardEvent) => {
+    if (busy) return;
+    if (e.key === "y") void doDelete();
+    else if (e.key === "Escape" || e.key === "n") setMode("view");
+    else return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const classes = ["spark", selected && "selected", fresh && "fresh", mode !== "view" && mode].filter(Boolean);
+
   return (
-    <article className="spark" id={`spark-${spark.id}`}>
-      <header className="spark-meta">
+    <article ref={articleRef} className={classes.join(" ")} id={`spark-${spark.id}`} onMouseDown={onSelect}>
+      <div className="spark-gutter">
         <time dateTime={new Date(spark.createdAt).toISOString()} title={fullTimestamp(spark.createdAt)}>
           {timeLabel(spark.createdAt)}
         </time>
         {edited && (
           <span className="edited" title={`Edited ${fullTimestamp(spark.updatedAt)}`}>
-            · edited
+            edited
           </span>
         )}
-        <span className="spacer" />
-        {mode === "view" && (
-          <Menu
-            items={[
-              { label: "Edit", onSelect: () => setMode("edit") },
-              { label: "Delete", danger: true, onSelect: () => setMode("confirm-delete") },
-            ]}
+      </div>
+
+      <div className="spark-body">
+        {mode === "edit" ? (
+          <Composer
+            initial={{ blurb: spark.blurb, imageIds: spark.images.map((i) => i.id) }}
+            submitLabel="Save"
+            autoFocus
+            onCancel={() => setMode("view")}
+            onSubmit={async (input) => {
+              onChanged(await api.update(spark.id, input));
+              setMode("view");
+            }}
           />
+        ) : (
+          <>
+            {spark.blurb && (
+              <Blurb text={spark.blurb} terms={terms} expanded={expanded} onToggle={() => setExpanded(!expanded)} />
+            )}
+            {spark.images.length > 0 && <ImageGrid spark={spark} onOpen={(i) => onOpenImage(spark, i)} />}
+          </>
         )}
-      </header>
 
-      {mode === "edit" ? (
-        <Composer
-          initial={{ blurb: spark.blurb, imageIds: spark.images.map((i) => i.id) }}
-          submitLabel="Save"
-          autoFocus
-          onCancel={() => setMode("view")}
-          onSubmit={async (input) => {
-            onChanged(await api.update(spark.id, input));
-            setMode("view");
-          }}
-        />
-      ) : (
-        <>
-          {spark.blurb && <Blurb text={spark.blurb} terms={terms} />}
-          {spark.images.length > 0 && <ImageGrid spark={spark} onOpen={(i) => onOpenImage(spark, i)} />}
-        </>
-      )}
+        {mode === "confirm-delete" && (
+          <div className="confirm-bar" role="alertdialog" aria-label="Confirm delete" onKeyDown={onConfirmKey}>
+            <span>Delete this spark?</span>
+            <span className="spacer" />
+            <button type="button" className="button ghost" onClick={() => setMode("view")} disabled={busy}>
+              Cancel <Kbd>Esc</Kbd>
+            </button>
+            <button type="button" className="button danger" onClick={doDelete} disabled={busy} autoFocus>
+              {busy ? "Deleting…" : "Delete"} <Kbd>y</Kbd>
+            </button>
+          </div>
+        )}
+        {error && <p className="form-error">{error}</p>}
+      </div>
 
-      {mode === "confirm-delete" && (
-        <div className="confirm-bar" role="alertdialog" aria-label="Confirm delete">
-          <span>Delete this spark?</span>
-          <span className="spacer" />
-          <button type="button" className="button secondary" onClick={() => setMode("view")} disabled={busy}>
-            Cancel
+      {mode === "view" && (
+        <div className="spark-actions">
+          {spark.blurb && (
+            <button type="button" className="icon-button" title="Copy text (y)" aria-label="Copy text" onClick={() => onCopy(spark)}>
+              <CopyIcon />
+            </button>
+          )}
+          <button type="button" className="icon-button" title="Edit (e)" aria-label="Edit" onClick={() => setMode("edit")}>
+            <EditIcon />
           </button>
-          <button type="button" className="button danger" onClick={doDelete} disabled={busy} autoFocus>
-            {busy ? "Deleting…" : "Delete"}
+          <button
+            type="button"
+            className="icon-button danger"
+            title="Delete (d)"
+            aria-label="Delete"
+            onClick={() => setMode("confirm-delete")}
+          >
+            <TrashIcon />
           </button>
         </div>
       )}
-      {error && <p className="form-error">{error}</p>}
     </article>
   );
 }
 
-const COLLAPSED_HEIGHT = 320;
+const COLLAPSED_HEIGHT = 300;
 
-function Blurb({ text, terms }: { text: string; terms: string[] }) {
+function Blurb({ text, terms, expanded, onToggle }: { text: string; terms: string[]; expanded: boolean; onToggle(): void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el) setOverflowing(el.scrollHeight > COLLAPSED_HEIGHT + 40);
+    if (el) setOverflowing(el.scrollHeight > COLLAPSED_HEIGHT + 60);
   }, [text]);
 
-  const collapsed = overflowing && !expanded && terms.length === 0;
+  const collapsible = overflowing && terms.length === 0;
+  const collapsed = collapsible && !expanded;
   return (
     <>
       <div
@@ -110,9 +165,10 @@ function Blurb({ text, terms }: { text: string; terms: string[] }) {
       >
         <RichText text={text} terms={terms} />
       </div>
-      {overflowing && terms.length === 0 && (
-        <button type="button" className="link-button" onClick={() => setExpanded(!expanded)}>
+      {collapsible && (
+        <button type="button" className="more-button" onClick={onToggle}>
           {expanded ? "Show less" : "Show more"}
+          <Kbd>m</Kbd>
         </button>
       )}
     </>
@@ -120,8 +176,8 @@ function Blurb({ text, terms }: { text: string; terms: string[] }) {
 }
 
 // Feed previews are deliberately small; click through to the lightbox for the full image.
-const SINGLE_MAX_WIDTH = 420;
-const SINGLE_MAX_HEIGHT = 280;
+const SINGLE_MAX_WIDTH = 440;
+const SINGLE_MAX_HEIGHT = 260;
 
 /** Sizes a lone image within the preview box, never upscaling, with no layout shift. */
 const singleImageStyle = (w: number, h: number) => ({
@@ -145,69 +201,6 @@ function ImageGrid({ spark, onOpen }: { spark: Spark; onOpen(index: number): voi
           <img src={thumbUrl(img.id)} width={img.width} height={img.height} loading="lazy" decoding="async" alt="" />
         </button>
       ))}
-    </div>
-  );
-}
-
-interface MenuItem {
-  label: string;
-  danger?: boolean;
-  onSelect(): void;
-}
-
-function Menu({ items }: { items: MenuItem[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div className="menu" ref={ref}>
-      <button
-        type="button"
-        className="icon-button"
-        aria-label="Spark actions"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <circle cx="5" cy="12" r="2" fill="currentColor" />
-          <circle cx="12" cy="12" r="2" fill="currentColor" />
-          <circle cx="19" cy="12" r="2" fill="currentColor" />
-        </svg>
-      </button>
-      {open && (
-        <ul className="menu-list" role="menu">
-          {items.map((item) => (
-            <li key={item.label} role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className={item.danger ? "danger" : undefined}
-                onClick={() => {
-                  setOpen(false);
-                  item.onSelect();
-                }}
-              >
-                {item.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

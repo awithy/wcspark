@@ -6,18 +6,23 @@ export function dayKey(ts: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-export function dayLabel(ts: number, now = new Date()): string {
-  const d = new Date(ts);
-  if (sameDay(d, now)) return "Today";
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (sameDay(d, yesterday)) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+const fullDay = (d: Date, now: Date) =>
+  d.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
     ...(d.getFullYear() !== now.getFullYear() && { year: "numeric" }),
   });
+
+/** A day heading: a relative name where one exists ("Today"), plus the calendar date. */
+export function dayLabel(ts: number, now = new Date()): { name: string; date: string | null } {
+  const d = new Date(ts);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const date = fullDay(d, now);
+  if (sameDay(d, now)) return { name: "Today", date };
+  if (sameDay(d, yesterday)) return { name: "Yesterday", date };
+  return { name: date, date: null };
 }
 
 export const timeLabel = (ts: number) =>
