@@ -13,7 +13,7 @@ await render(180).toFile(`${dir}/apple-touch-icon.png`);
 
 // Maskable: full-bleed background with the glyph inside the 80% safe zone.
 const inner = await render(400).toBuffer();
-await sharp({ create: { width: 512, height: 512, channels: 4, background: "#16130f" } })
+await sharp({ create: { width: 512, height: 512, channels: 4, background: "#141518" } })
   .composite([{ input: inner, gravity: "center" }])
   .png()
   .toFile(`${dir}/icon-maskable-512.png`);
