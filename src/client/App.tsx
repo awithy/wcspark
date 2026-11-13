@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { Composer, type ComposerHandle, type ComposerInitial } from "./Composer";
 import { dayKey, dayLabel } from "./format";
-import { SearchIcon, SparkMark } from "./icons";
+import { MoonIcon, SearchIcon, SparkMark, SunIcon, SystemThemeIcon } from "./icons";
 import { isTypingTarget, Kbd, ShortcutHelp } from "./keys";
 import { Lightbox } from "./Lightbox";
 import { firstUrl } from "./RichText";
 import { SparkCard, type SparkHandle } from "./SparkCard";
+import { nextTheme, themeLabel, useTheme } from "./theme";
 import { parseQuery } from "../shared/query";
 import type { Spark, SparkImage } from "../shared/types";
 
@@ -41,6 +42,7 @@ export function App() {
   const [freshId, setFreshId] = useState<number | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; seq: number } | null>(null);
+  const [theme, setTheme] = useTheme();
   const requestRef = useRef<AbortController | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -152,6 +154,12 @@ export function App() {
 
   const closeHelp = useCallback(() => setHelpOpen(false), []);
 
+  const cycleTheme = useCallback(() => {
+    const next = nextTheme(theme);
+    setTheme(next);
+    notify(`Theme: ${themeLabel(next)}`);
+  }, [theme, setTheme, notify]);
+
   const focusComposer = useCallback(() => {
     if (searching || input) {
       setInput("");
@@ -163,7 +171,7 @@ export function App() {
   }, [searching, input]);
 
   // Feed-level keyboard shortcuts. Overlays (lightbox, help) capture their own keys first.
-  const keyState = { sparks, selectedId, cursor, loadMore, copySpark, focusComposer, searching, notify };
+  const keyState = { sparks, selectedId, cursor, loadMore, copySpark, focusComposer, searching, notify, cycleTheme };
   const keyStateRef = useRef(keyState);
   keyStateRef.current = keyState;
 
@@ -213,6 +221,9 @@ export function App() {
           break;
         case "?":
           setHelpOpen(true);
+          break;
+        case "t":
+          s.cycleTheme();
           break;
         case "Escape":
           if (s.selectedId != null) setSelectedId(null);
@@ -299,6 +310,15 @@ export function App() {
             )
           )}
         </label>
+        <button
+          type="button"
+          className="icon-button theme-button"
+          onClick={cycleTheme}
+          title={`Theme: ${themeLabel(theme)} (t)`}
+          aria-label={`Theme: ${themeLabel(theme)}. Switch to ${themeLabel(nextTheme(theme))}`}
+        >
+          {theme === "light" ? <SunIcon /> : theme === "dark" ? <MoonIcon /> : <SystemThemeIcon />}
+        </button>
       </header>
 
       <main>

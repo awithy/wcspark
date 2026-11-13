@@ -89,3 +89,23 @@ export const SparkMark = () => (
     <path fill="currentColor" d="M12 1.5c.7 4.8 2.6 8.4 10.5 10.5-7.9 2.1-9.8 5.7-10.5 10.5-.7-4.8-2.6-8.4-10.5-10.5C9.4 9.9 11.3 6.3 12 1.5z" />
   </svg>
 );
+
+export const SystemThemeIcon = () => (
+  <Icon>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
+  </Icon>
+);
+
+export const SunIcon = () => (
+  <Icon>
+    <circle cx="12" cy="12" r="3.6" />
+    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+  </Icon>
+);
+
+export const MoonIcon = () => (
+  <Icon>
+    <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z" />
+  </Icon>
+);

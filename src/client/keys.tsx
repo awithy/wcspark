@@ -41,6 +41,7 @@ const SECTIONS: { title: string; rows: [string[], string][] }[] = [
       [["g", "G"], "First / last spark"],
       [["/"], "Search"],
       [["n"], "New spark"],
+      [["t"], "Switch theme (light, dark, system)"],
       [["Esc"], "Clear selection or search"],
     ],
   },

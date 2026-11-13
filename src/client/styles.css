@@ -4,28 +4,31 @@
    ========================================================================== */
 
 :root {
-  color-scheme: dark;
+  /* Follows the system preference; [data-theme] (set from the theme toggle) pins one. */
+  color-scheme: light dark;
 
-  --bg: #0f1012;
-  --bg-raised: #16171a;
-  --bg-hover: #141518;
-  --bg-selected: #18191d;
-  --line: #222428;
-  --line-strong: #2f3237;
-  --text: #d8dade;
-  --text-strong: #f2f3f5;
-  --muted: #8b9098;
-  --faint: #5d626a;
-  --accent: #4d8eff;
-  --accent-soft: rgb(77 142 255 / 0.16);
-  --mark: rgb(77 142 255 / 0.32);
-  --selection: rgb(77 142 255 / 0.35);
-  --danger: #e8696d;
-  --code-bg: rgb(255 255 255 / 0.055);
-  --img-edge: rgb(255 255 255 / 0.07);
-  --primary-bg: #e9eaed;
-  --primary-text: #111214;
-  --shadow-pop: 0 12px 40px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.3);
+  --bg: light-dark(#fafafa, #0f1012);
+  --bg-raised: light-dark(#ffffff, #16171a);
+  --bg-hover: light-dark(#f4f4f6, #141518);
+  --bg-selected: light-dark(#eff1f5, #18191d);
+  --line: light-dark(#e4e5e8, #222428);
+  --line-strong: light-dark(#d2d4d9, #2f3237);
+  --text: light-dark(#2a2c30, #d8dade);
+  --text-strong: light-dark(#111214, #f2f3f5);
+  --muted: light-dark(#686c73, #8b9098);
+  --faint: light-dark(#9a9da3, #5d626a);
+  --accent: light-dark(#2563eb, #4d8eff);
+  --accent-soft: light-dark(rgb(37 99 235 / 0.1), rgb(77 142 255 / 0.16));
+  --mark: light-dark(rgb(59 130 246 / 0.22), rgb(77 142 255 / 0.32));
+  --selection: light-dark(rgb(59 130 246 / 0.25), rgb(77 142 255 / 0.35));
+  --danger: light-dark(#c9403f, #e8696d);
+  --code-bg: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.055));
+  --img-edge: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.07));
+  --primary-bg: light-dark(#1b1d20, #e9eaed);
+  --primary-text: light-dark(#ffffff, #111214);
+  --shadow-pop:
+    0 12px 40px light-dark(rgb(0 0 0 / 0.12), rgb(0 0 0 / 0.5)),
+    0 2px 8px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3));
 
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas,
@@ -48,30 +51,12 @@
   scrollbar-color: var(--line-strong) transparent;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --bg: #fafafa;
-    --bg-raised: #ffffff;
-    --bg-hover: #f4f4f6;
-    --bg-selected: #eff1f5;
-    --line: #e4e5e8;
-    --line-strong: #d2d4d9;
-    --text: #2a2c30;
-    --text-strong: #111214;
-    --muted: #686c73;
-    --faint: #9a9da3;
-    --accent: #2563eb;
-    --accent-soft: rgb(37 99 235 / 0.1);
-    --mark: rgb(59 130 246 / 0.22);
-    --selection: rgb(59 130 246 / 0.25);
-    --danger: #c9403f;
-    --code-bg: rgb(0 0 0 / 0.05);
-    --img-edge: rgb(0 0 0 / 0.08);
-    --primary-bg: #1b1d20;
-    --primary-text: #ffffff;
-    --shadow-pop: 0 12px 40px rgb(0 0 0 / 0.12), 0 2px 8px rgb(0 0 0 / 0.06);
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 ::selection {
@@ -233,6 +218,11 @@ button {
   color: var(--text-strong);
   font: inherit;
   font-size: 14px;
+}
+
+.theme-button {
+  flex: none;
+  margin-left: -10px;
 }
 
 .search input::placeholder {

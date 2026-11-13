@@ -8,7 +8,7 @@ A single-user, chronological journal of interesting things: links, ideas, screen
 - Paste images into the composer, or press Ctrl+V anywhere on the page. You can also drag-and-drop or pick files.
 - Keyboard-driven: `j`/`k` to move, `/` to search, `n` to write, `e`/`d`/`y`/`o` to edit, delete, copy, or open
   the selected spark. Press `?` for the full list.
-- Follows the system light/dark preference.
+- Follows the system light/dark preference, or pin light or dark per device with the toggle in the top bar (`t`).
 - Installable PWA with an Android share target: share a link or image from any app into Sparks.
 - No auth. It is meant to sit behind a reverse proxy that handles mTLS.
 
