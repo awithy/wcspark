@@ -31,6 +31,44 @@ Requires Node 22+.
 | `PORT`     | `3000`      |                                            |
 | `DATA_DIR` | `./data`    | Database, original images, and thumbnails  |
 
+## CLI
+
+`wcspark` talks to the API over HTTPS with an mTLS client certificate.
+
+```sh
+npm run cli:install          # bundles to dist/cli/wcspark.js, installs to ~/.local/bin/wcspark
+npm run cli -- ls            # run from source (tsx) without installing
+```
+
+Configure it in `~/.config/wcspark/config.json` (or `WCSPARK_URL`/`_CERT`/`_KEY`/`_CA` env vars,
+or `--url`/`--cert`/`--key`/`--ca` flags, which take precedence in that order):
+
+```json
+{ "url": "https://sparks.example.com", "cert": "~/keys/client.cert.pem", "key": "~/keys/client.key.pem" }
+```
+
+`ca` is only needed when the server's certificate isn't publicly trusted. `wcspark config --check`
+shows the effective settings and tests the connection.
+
+```sh
+wcspark add Look into smithy.io for API codegen
+wcspark add "https://example.com/post?id=1" -i shot.png other.jpg
+wcspark add -c                         # clipboard image or text (wl-paste / xclip)
+pbpaste | wcspark add                  # stdin; with no input at all, $EDITOR opens
+wcspark ls --since 7d                  # also --until, --on <day>, -n, --all, -l, --json
+wcspark search aws emulator
+wcspark show 12
+wcspark edit 12 -a "follow-up"         # or replacement text, -i, -c, -r <n|image-id>, --clear-images, -e
+wcspark rm 12 -y
+wcspark dl 12 -o ~/Downloads           # images by spark id or image id; --thumb, -o -
+wcspark export ~/backup/sparks         # sparks.json + images/ (incremental)
+wcspark open aws                       # web app in the browser
+```
+
+Every listing and editing command accepts `--json`; image objects there include an absolute `url`.
+
+An agent skill for pi lives in `skills/wcspark/SKILL.md`; `npm run skill:install` copies it to `~/.pi/skills/`.
+
 ## Data
 
 ```
@@ -58,6 +96,7 @@ copy and paste instead.
 ```
 src/server   Fastify API, SQLite (better-sqlite3), image processing (sharp)
 src/client   React UI (Vite)
+src/cli      wcspark command-line client (commander, bundled with esbuild)
 src/shared   Types and helpers used by both
 public/      PWA manifest, service worker, icons (regenerate with `npm run icons`)
 ```
